@@ -6,6 +6,7 @@ export type GenerateRequest = {
   tone?: string
   language?: string
   options?: Record<string, any>
+  history?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
 }
 
 export type GenerateResponse = {

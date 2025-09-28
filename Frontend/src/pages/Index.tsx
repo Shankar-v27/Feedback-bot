@@ -8,12 +8,18 @@ import { Settings, History, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFeedback } from "@/lib/api";
 
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 interface FeedbackResponse {
   id: string;
   input: string;
   output: string;
   timestamp: Date;
   rating?: 'positive' | 'negative';
+  history: ChatMessage[];
 }
 
 const Index = () => {
@@ -37,7 +43,11 @@ const Index = () => {
         id: resp.id,
         input,
         output: resp.output,
-        timestamp: new Date()
+        timestamp: new Date(),
+        history: [
+          { role: 'user', content: input },
+          { role: 'assistant', content: resp.output }
+        ]
       };
 
       setResponses(prev => [newResponse, ...prev]);
@@ -74,6 +84,48 @@ const Index = () => {
       title: "History Cleared",
       description: "All feedback history has been cleared.",
     });
+  };
+
+  // Follow-up reply for an existing response (chat continuation)
+  const handleFollowUp = async (id: string, message: string) => {
+    setIsLoading(true);
+    try {
+      const target = responses.find(r => r.id === id);
+      if (!target) return;
+      const history = target.history || [];
+
+      const resp = await generateFeedback({
+        message,
+        tone: "empathetic",
+        language: "en",
+        history: [...history, { role: 'user', content: message }],
+        options: { max_tokens: 300 }
+      });
+
+      setResponses(prev => prev.map(r =>
+        r.id === id
+          ? {
+              ...r,
+              input: message,
+              output: resp.output,
+              timestamp: new Date(),
+              history: [
+                ...history,
+                { role: 'user', content: message },
+                { role: 'assistant', content: resp.output }
+              ]
+            }
+          : r
+      ));
+    } catch (error: any) {
+      toast({
+        title: "Follow-up Failed",
+        description: error?.message || "Failed to send follow-up.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -151,7 +203,7 @@ const Index = () => {
           <FeedbackInput onSubmit={handleFeedbackSubmit} isLoading={isLoading} />
 
           {/* Output Section */}
-          <FeedbackOutput responses={responses} onRate={handleRate} />
+          <FeedbackOutput responses={responses} onRate={handleRate} onReply={handleFollowUp} />
         </div>
       </main>
 

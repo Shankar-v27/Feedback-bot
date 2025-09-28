@@ -37,7 +37,7 @@ function buildHeaders () {
 }
 
 export const aiClient = {
-  async generate ({ message, context, tone, language, options }) {
+  async generate ({ message, context, tone, language, options, history }) {
     // If not configured yet, return 501 so the server still runs
     requireApiUrl()
 
@@ -51,6 +51,7 @@ export const aiClient = {
       model: getModel(),
       messages: [
         { role: 'system', content: 'You are an AI-driven automated feedback response generator.' },
+        ...(Array.isArray(history) ? history : []),
         { role: 'user', content: prompt }
       ],
       stream: false,

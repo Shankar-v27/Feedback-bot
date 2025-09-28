@@ -9,7 +9,13 @@ const generateSchema = z.object({
   context: z.string().optional(),
   tone: z.string().optional(),
   language: z.string().optional(),
-  options: z.record(z.any()).optional()
+  options: z.record(z.any()).optional(),
+  history: z.array(
+    z.object({
+      role: z.enum(['system', 'user', 'assistant']),
+      content: z.string()
+    })
+  ).optional()
 })
 
 router.post('/generate', async (req, res, next) => {
@@ -19,9 +25,9 @@ router.post('/generate', async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid request body', details: parsed.error.flatten() })
     }
 
-    const { message, context, tone, language, options } = parsed.data
+    const { message, context, tone, language, options, history } = parsed.data
 
-    const result = await aiClient.generate({ message, context, tone, language, options })
+    const result = await aiClient.generate({ message, context, tone, language, options, history })
     res.json(result)
   } catch (err) {
     next(err)
